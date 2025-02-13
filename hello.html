@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advanced Dark Typing Test</title>
+  <!-- Google Fonts for modern look -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      /* Default Theme: GitHub Dark */
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --text-color: #c9d1d9;
+      --accent-color: #58a6ff;
+      --error-color: #f85149;
+      --modal-bg: rgba(13, 17, 23, 0.95);
+      --border-color: #30363d;
+    }
+    /* Blue Theme (applied via JS) */
+    .theme-blue {
+      --bg: #001f3f;
+      --card-bg: #00264d;
+      --text-color: #e0e0ff;
+      --accent-color: #00aaff;
+      --error-color: #ff4d4d;
+      --border-color: #003366;
+    }
+    /* Classic Black Theme */
+    .theme-classic {
+      --bg: #000000;
+      --card-bg: #111111;
+      --text-color: #cccccc;
+      --accent-color: #ff851b;
+      --error-color: #ff4136;
+      --border-color: #333333;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    /* Top Bar with Settings & History */
+    .top-bar {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      z-index: 100;
+    }
+    .top-bar button {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .top-bar button:hover {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+    .container {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 900px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .header p {
+      font-size: 1rem;
+      opacity: 0.8;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .controls label {
+      font-size: 1rem;
+    }
+    .controls select {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-color);
+      font-size: 1rem;
+      outline: none;
+    }
+    #textDisplay {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+      line-height: 1.6;
+      height: 220px;
+      overflow-y: auto;
+      text-align: left;
+      position: relative; /* For cursor positioning */
+    }
+    #textDisplay span {
+      transition: color 0.2s ease;
+    }
+    #textDisplay span.correct {
+      color: var(--accent-color);
+    }
+    #textDisplay span.incorrect {
+      color: var(--error-color);
+    }
+    /* Active Cursor */
+    #cursor {
+      position: absolute;
+      width: 2px;
+      height: 1.5em;
+      background: var(--accent-color);
+      animation: blink 1s step-start 0s infinite;
+      transition: left 0.2s ease, top 0.2s ease;
+      pointer-events: none;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+    #textInput {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-color);
+      outline: none;
+      margin-bottom: 1rem;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .progress-bar {
+      background: var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      height: 10px;
+      margin-bottom: 1rem;
+    }
+    .progress {
+      height: 100%;
+      width: 100%;
+      background: var(--accent-color);
+      transition: width 1s linear;
+    }
+    .button-container {
+      text-align: center;
+    }
+    #restartButton {
+      padding: 0.75rem 1.5rem;
+      font-size: 1.2rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-color);
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #restartButton:hover {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--modal-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease;
+      z-index: 200;
+    }
+    .modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+    }
+    .modal-content h2 {
+      margin-bottom: 1rem;
+      font-size: 1.8rem;
+    }
+    .modal-content p {
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+    .modal-content button {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-color);
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 0.5rem;
+    }
+    .modal-content button:hover {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+    /* Settings Modal Form */
+    .settings-group {
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+    .settings-group label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 1rem;
+    }
+    .settings-group input[type="text"],
+    .settings-group input[type="checkbox"] {
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--card-bg);
+      color: var(--text-color);
+      outline: none;
+      width: 100%;
+    }
+    .settings-group input[type="checkbox"] {
+      width: auto;
+      margin-right: 0.5rem;
+    }
+    /* History Table */
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+    }
+    .history-table th,
+    .history-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .history-table th {
+      background: var(--bg);
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <button id="settingsButton">Settings</button>
+    <button id="historyButton">History</button>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container">
+    <div class="header">
+      <h1>Typing Test</h1>
+      <p>Test your speed and accuracy</p>
+    </div>
+    <div class="controls">
+      <label for="durationSelect">Duration:</label>
+      <select id="durationSelect">
+        <option value="15">15 sec</option>
+        <option value="30" selected>30 sec</option>
+        <option value="60">60 sec</option>
+        <option value="120">120 sec</option>
+      </select>
+    </div>
+    <div id="textDisplay">
+      <!-- The test text will be generated here -->
+      <div id="cursor"></div>
+    </div>
+    <input type="text" id="textInput" placeholder="Start typing..." autocomplete="off" />
+    <div class="stats">
+      <div>WPM: <span id="wpm">0</span></div>
+      <div>Accuracy: <span id="accuracy">0</span>%</div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress" id="progress"></div>
+    </div>
+    <div class="button-container">
+      <button id="restartButton">Restart</button>
+    </div>
+  </div>
+
+  <!-- Result Modal -->
+  <div class="modal" id="resultModal">
+    <div class="modal-content">
+      <h2>Time's Up!</h2>
+      <p>Your WPM: <span id="finalWPM">0</span></p>
+      <p>Accuracy: <span id="finalAccuracy">0</span>%</p>
+      <button id="modalRestartButton">Try Again</button>
+      <button id="closeResultModal">Close</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <h2>Settings</h2>
+      <div class="settings-group">
+        <label for="restartShortcut">Restart Shortcut (e.g., Shift+R or Esc):</label>
+        <input type="text" id="restartShortcut" value="Shift+R" />
+      </div>
+      <div class="settings-group">
+        <label>
+          <input type="checkbox" id="autoScrollToggle" checked />
+          Enable Auto-scroll
+        </label>
+      </div>
+      <div class="settings-group">
+        <label>
+          <input type="checkbox" id="stopOnErrorToggle" />
+          Stop on Error
+        </label>
+      </div>
+      <div class="settings-group">
+        <label for="textComplexity">Text Complexity:</label>
+        <select id="textComplexity">
+          <option value="simple">Simple (everyday words)</option>
+          <option value="advanced">Advanced (more complex)</option>
+        </select>
+      </div>
+      <div class="settings-group">
+        <label for="themeSelect">Theme:</label>
+        <select id="themeSelect">
+          <option value="github-dark">GitHub Dark</option>
+          <option value="blue">Blue</option>
+          <option value="classic">Classic Black</option>
+        </select>
+      </div>
+      <button id="saveSettingsButton">Save Settings</button>
+      <button id="closeSettingsButton">Close</button>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal" id="historyModal">
+    <div class="modal-content">
+      <h2>Test History</h2>
+      <table class="history-table" id="historyTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Duration (sec)</th>
+            <th>WPM</th>
+            <th>Accuracy (%)</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <!-- History rows inserted here -->
+        </tbody>
+      </table>
+      <button id="clearHistoryButton">Clear History</button>
+      <button id="closeHistoryButton">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== Global DOM Elements =====
+    const textDisplay = document.getElementById("textDisplay");
+    const textInput = document.getElementById("textInput");
+    const durationSelect = document.getElementById("durationSelect");
+    const wpmElement = document.getElementById("wpm");
+    const accuracyElement = document.getElementById("accuracy");
+    const progressBar = document.getElementById("progress");
+    const restartButton = document.getElementById("restartButton");
+    const cursor = document.getElementById("cursor");
+
+    // Modals & Top Bar
+    const resultModal = document.getElementById("resultModal");
+    const finalWPMElement = document.getElementById("finalWPM");
+    const finalAccuracyElement = document.getElementById("finalAccuracy");
+    const modalRestartButton = document.getElementById("modalRestartButton");
+    const closeResultModal = document.getElementById("closeResultModal");
+    const settingsButton = document.getElementById("settingsButton");
+    const historyButton = document.getElementById("historyButton");
+    const settingsModal = document.getElementById("settingsModal");
+    const restartShortcutInput = document.getElementById("restartShortcut");
+    const autoScrollToggle = document.getElementById("autoScrollToggle");
+    const stopOnErrorToggle = document.getElementById("stopOnErrorToggle");
+    const textComplexitySelect = document.getElementById("textComplexity");
+    const themeSelect = document.getElementById("themeSelect");
+    const saveSettingsButton = document.getElementById("saveSettingsButton");
+    const closeSettingsButton = document.getElementById("closeSettingsButton");
+    const historyModal = document.getElementById("historyModal");
+    const historyTableBody = document.getElementById("historyBody");
+    const clearHistoryButton = document.getElementById("clearHistoryButton");
+    const closeHistoryButton = document.getElementById("closeHistoryButton");
+
+    // ===== Global Variables =====
+    let totalTime = parseInt(durationSelect.value);
+    let timeLeft = totalTime;
+    let timerInterval = null;
+    let started = false;
+    let correctChars = 0;
+    let totalTyped = 0;
+    let words = [];
+
+    // Curated word sets
+    // 200+ common everyday words for "simple" mode (no repeats per test)
+    const simpleWords = [
+      "apple", "ball", "cat", "dog", "elephant", "fish", "guitar", "hat", "ice", "juice",
+      "kite", "lamp", "mouse", "nose", "orange", "pig", "queen", "rose", "sun", "tree",
+      "umbrella", "van", "wolf", "xylophone", "yarn", "zebra", "air", "book", "car", "desk",
+      "egg", "fork", "goat", "house", "island", "jar", "key", "leaf", "moon", "nest",
+      "owl", "pen", "quill", "river", "shoe", "table", "under", "vase", "water", "xray",
+      "yacht", "zip", "ant", "bridge", "candle", "door", "engine", "farm", "garden", "hill",
+      "jacket", "kitchen", "lunch", "mountain", "night", "ocean", "pencil", "quiet", "road", "star",
+      "train", "unicorn", "village", "window", "xenon", "yogurt", "zest", "arm", "brain", "chest",
+      "dinner", "ear", "face", "glove", "heart", "idea", "joke", "kick", "luck", "mind",
+      "noise", "order", "power", "quiet", "rest", "smile", "trust", "unity", "voice", "waste",
+      "yield", "zeal", "actor", "bottle", "candy", "dance", "earth", "feather", "globe", "hill",
+      "ink", "jungle", "koala", "lemonade", "monday", "novel", "oasis", "piano", "quartz", "river",
+      "sugar", "tiger", "uncle", "vapor", "whale", "xenial", "yonder", "zenith", "arch", "bridge",
+      "crown", "drum", "ember", "flame", "grape", "harbor", "ivy", "jewel", "king", "lily",
+      "moss", "nest", "olive", "pearl", "quartz", "rain", "sugar", "tide", "urban", "vivid",
+      "whisper", "xenon", "yolk", "zephyr", "actor", "baker", "chef", "doctor", "engineer", "farmer",
+      "guard", "hunter", "inventor", "judge", "king", "leader", "minister", "nurse", "officer", "pilot",
+      "queen", "ranger", "sailor", "teacher", "umpire", "veteran", "worker", "xenophile", "yodeler", "zealot"
+    ];
+    // Advanced words (repetitions allowed)
+    const advancedWords = [
+      "exacerbate", "gregarious", "ubiquitous", "mellifluous", "ephemeral",
+      "obfuscate", "quintessential", "idiosyncratic", "perspicacious",
+      "incontrovertible", "magnanimous", "perfunctory", "recalcitrant",
+      "acrimonious", "capricious", "loquacious", "ineffable", "soliloquy",
+      "panacea", "anomaly", "benevolent"
+    ];
+
+    // Settings object with defaults
+    let settings = {
+      restartShortcut: "Shift+R",
+      autoScroll: true,
+      stopOnError: false,
+      textComplexity: "simple",
+      theme: "github-dark"
+    };
+
+    // Load settings from localStorage if available
+    if (localStorage.getItem("typingTestSettings")) {
+      settings = JSON.parse(localStorage.getItem("typingTestSettings"));
+      restartShortcutInput.value = settings.restartShortcut;
+      autoScrollToggle.checked = settings.autoScroll;
+      stopOnErrorToggle.checked = settings.stopOnError;
+      textComplexitySelect.value = settings.textComplexity;
+      themeSelect.value = settings.theme;
+    }
+
+    // ===== Apply Theme =====
+    function applyTheme() {
+      document.documentElement.classList.remove("theme-blue", "theme-classic");
+      if (settings.theme === "blue") {
+        document.documentElement.classList.add("theme-blue");
+      } else if (settings.theme === "classic") {
+        document.documentElement.classList.add("theme-classic");
+      }
+      // If "github-dark", no extra class is needed (default variables)
+    }
+    applyTheme();
+
+    // ===== Generate Test Text =====
+    function generateText() {
+      words = [];
+      textDisplay.innerHTML = "";
+      // Ensure the cursor element remains as the last child
+      textDisplay.appendChild(cursor);
+      if (settings.textComplexity === "simple") {
+        // Use a copy of simpleWords and shuffle so no word repeats
+        let wordArray = [...simpleWords];
+        // Shuffle wordArray using Fisher–Yates
+        for (let i = wordArray.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [wordArray[i], wordArray[j]] = [wordArray[j], wordArray[i]];
+        }
+        // Take the first 50 words
+        wordArray = wordArray.slice(0, 50);
+        wordArray.forEach(word => {
+          words.push(word);
+        });
+      } else {
+        // For advanced mode, allow repetition
+        const wordArray = advancedWords;
+        for (let i = 0; i < 50; i++) {
+          const randomIndex = Math.floor(Math.random() * wordArray.length);
+          words.push(wordArray[randomIndex]);
+        }
+      }
+      // Render each word as individual spans with a space between words
+      words.forEach((word, index) => {
+        for (let char of word) {
+          const span = document.createElement("span");
+          span.innerText = char;
+          textDisplay.insertBefore(span, cursor);
+        }
+        if (index < words.length - 1) {
+          const span = document.createElement("span");
+          span.innerText = " ";
+          textDisplay.insertBefore(span, cursor);
+        }
+      });
+      // Update cursor position after generating text
+      updateCursorPosition();
+    }
+
+    // ===== Cursor Positioning =====
+    function updateCursorPosition() {
+      const spans = textDisplay.querySelectorAll("span");
+      const index = textInput.value.length;
+      if (index < spans.length) {
+        const targetSpan = spans[index];
+        const left = targetSpan.offsetLeft;
+        const top = targetSpan.offsetTop;
+        cursor.style.left = left + "px";
+        cursor.style.top = top + "px";
+        cursor.style.display = "block";
+      } else {
+        cursor.style.display = "none";
+      }
+    }
+
+    // ===== Timer and Progress =====
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateProgress();
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          textInput.disabled = true;
+          showResults();
+        }
+      }, 1000);
+    }
+    function updateProgress() {
+      progressBar.style.width = ((timeLeft / totalTime) * 100) + "%";
+    }
+
+    // ===== Show Results & Save History =====
+    function showResults() {
+      const wpm = Math.round((correctChars / 5) / (totalTime / 60));
+      const accuracy = totalTyped > 0 ? Math.round((correctChars / totalTyped) * 100) : 0;
+      finalWPMElement.innerText = wpm;
+      finalAccuracyElement.innerText = accuracy;
+      resultModal.classList.add("active");
+      wpmElement.innerText = wpm;
+      accuracyElement.innerText = accuracy;
+      saveHistory({
+        date: new Date().toLocaleString(),
+        duration: totalTime,
+        wpm,
+        accuracy
+      });
+      textInput.blur();
+    }
+    function saveHistory(result) {
+      let history = JSON.parse(localStorage.getItem("typingTestHistory")) || [];
+      history.push(result);
+      localStorage.setItem("typingTestHistory", JSON.stringify(history));
+    }
+    function loadHistory() {
+      let history = JSON.parse(localStorage.getItem("typingTestHistory")) || [];
+      historyTableBody.innerHTML = "";
+      history.reverse().forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${item.date}</td><td>${item.duration}</td><td>${item.wpm}</td><td>${item.accuracy}</td>`;
+        historyTableBody.appendChild(row);
+      });
+    }
+
+    // ===== Input Event Handler =====
+    textInput.addEventListener("input", () => {
+      if (!started) {
+        totalTime = parseInt(durationSelect.value);
+        timeLeft = totalTime;
+        updateProgress();
+        started = true;
+        startTimer();
+      }
+      const inputText = textInput.value;
+      totalTyped++;
+      const spans = textDisplay.querySelectorAll("span");
+      for (let i = 0; i < spans.length; i++) {
+        if (i < inputText.length) {
+          if (inputText[i] === spans[i].innerText) {
+            spans[i].classList.add("correct");
+            spans[i].classList.remove("incorrect");
+          } else {
+            spans[i].classList.add("incorrect");
+            spans[i].classList.remove("correct");
+          }
+        } else {
+          spans[i].classList.remove("correct");
+          spans[i].classList.remove("incorrect");
+        }
+      }
+      correctChars = 0;
+      for (let i = 0; i < inputText.length; i++) {
+        if (i < spans.length && inputText[i] === spans[i].innerText) {
+          correctChars++;
+        }
+      }
+      if (settings.autoScroll) updateCursorPosition();
+      if (settings.stopOnError && inputText.length > 0) {
+        const lastIndex = inputText.length - 1;
+        if (lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
+          clearInterval(timerInterval);
+          textInput.disabled = true;
+          showResults();
+        }
+      }
+    });
+
+    // ===== Reset Test =====
+    function resetTest() {
+      clearInterval(timerInterval);
+      textInput.disabled = false;
+      textInput.value = "";
+      started = false;
+      totalTime = parseInt(durationSelect.value);
+      timeLeft = totalTime;
+      correctChars = 0;
+      totalTyped = 0;
+      wpmElement.innerText = 0;
+      accuracyElement.innerText = 0;
+      updateProgress();
+      generateText();
+      textInput.focus();
+    }
+
+    // ===== Shortcut Handling =====
+    function getShortcutString(e) {
+      let keys = [];
+      if (e.ctrlKey) keys.push("Ctrl");
+      if (e.shiftKey) keys.push("Shift");
+      if (e.altKey) keys.push("Alt");
+      if (e.metaKey) keys.push("Meta");
+      keys.push(e.key.toUpperCase());
+      return keys.join("+");
+    }
+    document.addEventListener("keydown", (e) => {
+      // Allow Escape as restart if no modal is open
+      if (e.key === "Escape" && !document.querySelector(".modal.active")) {
+        e.preventDefault();
+        resetTest();
+        return;
+      }
+      if (getShortcutString(e) === settings.restartShortcut.toUpperCase()) {
+        e.preventDefault();
+        resetTest();
+      }
+    });
+
+    // ===== Modal Controls =====
+    modalRestartButton.addEventListener("click", () => {
+      resultModal.classList.remove("active");
+      resetTest();
+    });
+    closeResultModal.addEventListener("click", () => {
+      resultModal.classList.remove("active");
+      textInput.focus();
+    });
+    settingsButton.addEventListener("click", () => {
+      settingsModal.classList.add("active");
+    });
+    closeSettingsButton.addEventListener("click", () => {
+      settingsModal.classList.remove("active");
+    });
+    saveSettingsButton.addEventListener("click", () => {
+      settings.restartShortcut = restartShortcutInput.value.trim() || "Shift+R";
+      settings.autoScroll = autoScrollToggle.checked;
+      settings.stopOnError = stopOnErrorToggle.checked;
+      settings.textComplexity = textComplexitySelect.value;
+      settings.theme = themeSelect.value;
+      localStorage.setItem("typingTestSettings", JSON.stringify(settings));
+      settingsModal.classList.remove("active");
+      applyTheme();
+      generateText();
+      textInput.focus();
+    });
+    historyButton.addEventListener("click", () => {
+      loadHistory();
+      historyModal.classList.add("active");
+    });
+    closeHistoryButton.addEventListener("click", () => {
+      historyModal.classList.remove("active");
+      textInput.focus();
+    });
+    clearHistoryButton.addEventListener("click", () => {
+      localStorage.removeItem("typingTestHistory");
+      loadHistory();
+    });
+    document.querySelectorAll(".modal").forEach(modal => {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.classList.remove("active");
+      });
+    });
+
+    // ===== Initialization =====
+    updateProgress();
+    generateText();
+    window.addEventListener("load", () => {
+      textInput.focus();
+    });
+    document.querySelector(".container").addEventListener("click", () => {
+      if (!document.querySelector(".modal.active")) textInput.focus();
+    });
+  </script>
+</body>
+</html>
+
