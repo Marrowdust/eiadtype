@@ -184,8 +184,9 @@
       text-align: center;
       margin-top: 1rem;
     }
-    /* Start Test Button (initial state) */
-    #startButton {
+    /* Start & Restart Buttons */
+    #startButton,
+    #restartButton {
       padding: 0.75rem 1.5rem;
       font-size: 1.2rem;
       border: 1px solid var(--border-color);
@@ -196,20 +197,7 @@
       transition: background 0.3s ease;
       margin-bottom: 1rem;
     }
-    #startButton:hover {
-      background: var(--accent-color);
-      border-color: var(--accent-color);
-    }
-    #restartButton {
-      padding: 0.75rem 1.5rem;
-      font-size: 1.2rem;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      background: var(--card-bg);
-      color: var(--text-color);
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
+    #startButton:hover,
     #restartButton:hover {
       background: var(--accent-color);
       border-color: var(--accent-color);
@@ -305,6 +293,26 @@
     .history-table th {
       background: var(--bg);
     }
+    /* Mobile Adjustments */
+    @media screen and (max-width: 480px) {
+      #textInput {
+        font-size: 1.2rem;
+        padding: 0.5rem;
+      }
+      .container {
+        padding: 1rem;
+      }
+      .header h1 {
+        font-size: 1.5rem;
+      }
+      .header p {
+        font-size: 0.9rem;
+      }
+      #startButton, #restartButton {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -333,7 +341,7 @@
       <!-- The test text will be generated here -->
       <div id="cursor"></div>
     </div>
-    <!-- Text Input is initially disabled -->
+    <!-- Initially disabled until the test starts -->
     <input type="text" id="textInput" placeholder="Start typing..." autocomplete="off" disabled />
     
     <div class="stats">
@@ -345,7 +353,7 @@
     </div>
     
     <div class="button-container">
-      <!-- Start Test button (shown initially) -->
+      <!-- Start Test button shown initially -->
       <button id="startButton">Start Test</button>
       <!-- Restart button (always available once test starts) -->
       <button id="restartButton">Restart</button>
@@ -627,7 +635,6 @@
 
     // ===== Input Event Handler =====
     textInput.addEventListener("input", () => {
-      // Since the test now starts via the Start button, we assume started is true
       const inputText = textInput.value;
       totalTyped++;
       const spans = textDisplay.querySelectorAll("span");
@@ -672,8 +679,7 @@
     });
 
     // ===== Start Test Button Handler =====
-    startButton.addEventListener("click", () => {
-      // When the test starts, enable the input and start the timer.
+    function startTest() {
       totalTime = parseInt(durationSelect.value);
       timeLeft = totalTime;
       updateProgress();
@@ -681,8 +687,12 @@
       textInput.disabled = false;
       textInput.focus();
       startTimer();
-      // Hide the Start button so it doesn't interfere.
       startButton.style.display = "none";
+    }
+    startButton.addEventListener("click", startTest);
+    startButton.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      startTest();
     });
 
     // ===== Reset Test =====
@@ -699,9 +709,13 @@
       accuracyElement.innerText = 0;
       updateProgress();
       generateText();
-      // Show the Start button again
       startButton.style.display = "block";
     }
+    restartButton.addEventListener("click", resetTest);
+    restartButton.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      resetTest();
+    });
 
     // ===== Shortcut Handling =====
     function getShortcutString(e) {
@@ -768,6 +782,11 @@
       modal.addEventListener("click", (e) => {
         if (e.target === modal) modal.classList.remove("active");
       });
+    });
+
+    // ===== Auto-Scroll on Focus (for mobile) =====
+    textInput.addEventListener("focus", () => {
+      textInput.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 
     // ===== Initialization =====
