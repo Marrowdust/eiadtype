@@ -126,7 +126,7 @@
       height: 220px;
       overflow-y: auto;
       text-align: left;
-      position: relative; /* For cursor positioning */
+      position: relative;
     }
     #textDisplay span {
       transition: color 0.2s ease;
@@ -182,6 +182,23 @@
     }
     .button-container {
       text-align: center;
+      margin-top: 1rem;
+    }
+    /* Start Test Button (initial state) */
+    #startButton {
+      padding: 0.75rem 1.5rem;
+      font-size: 1.2rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-color);
+      cursor: pointer;
+      transition: background 0.3s ease;
+      margin-bottom: 1rem;
+    }
+    #startButton:hover {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
     }
     #restartButton {
       padding: 0.75rem 1.5rem;
@@ -316,7 +333,9 @@
       <!-- The test text will be generated here -->
       <div id="cursor"></div>
     </div>
-    <input type="text" id="textInput" placeholder="Start typing..." autocomplete="off" />
+    <!-- Text Input is initially disabled -->
+    <input type="text" id="textInput" placeholder="Start typing..." autocomplete="off" disabled />
+    
     <div class="stats">
       <div>WPM: <span id="wpm">0</span></div>
       <div>Accuracy: <span id="accuracy">0</span>%</div>
@@ -324,7 +343,11 @@
     <div class="progress-bar">
       <div class="progress" id="progress"></div>
     </div>
+    
     <div class="button-container">
+      <!-- Start Test button (shown initially) -->
+      <button id="startButton">Start Test</button>
+      <!-- Restart button (always available once test starts) -->
       <button id="restartButton">Restart</button>
     </div>
   </div>
@@ -411,6 +434,7 @@
     const accuracyElement = document.getElementById("accuracy");
     const progressBar = document.getElementById("progress");
     const restartButton = document.getElementById("restartButton");
+    const startButton = document.getElementById("startButton");
     const cursor = document.getElementById("cursor");
 
     // Modals & Top Bar
@@ -603,13 +627,7 @@
 
     // ===== Input Event Handler =====
     textInput.addEventListener("input", () => {
-      if (!started) {
-        totalTime = parseInt(durationSelect.value);
-        timeLeft = totalTime;
-        updateProgress();
-        started = true;
-        startTimer();
-      }
+      // Since the test now starts via the Start button, we assume started is true
       const inputText = textInput.value;
       totalTyped++;
       const spans = textDisplay.querySelectorAll("span");
@@ -653,10 +671,24 @@
       }
     });
 
+    // ===== Start Test Button Handler =====
+    startButton.addEventListener("click", () => {
+      // When the test starts, enable the input and start the timer.
+      totalTime = parseInt(durationSelect.value);
+      timeLeft = totalTime;
+      updateProgress();
+      started = true;
+      textInput.disabled = false;
+      textInput.focus();
+      startTimer();
+      // Hide the Start button so it doesn't interfere.
+      startButton.style.display = "none";
+    });
+
     // ===== Reset Test =====
     function resetTest() {
       clearInterval(timerInterval);
-      textInput.disabled = false;
+      textInput.disabled = true;
       textInput.value = "";
       started = false;
       totalTime = parseInt(durationSelect.value);
@@ -667,7 +699,8 @@
       accuracyElement.innerText = 0;
       updateProgress();
       generateText();
-      textInput.focus();
+      // Show the Start button again
+      startButton.style.display = "block";
     }
 
     // ===== Shortcut Handling =====
@@ -740,14 +773,11 @@
     // ===== Initialization =====
     updateProgress();
     generateText();
-    window.addEventListener("load", () => {
-      // Only auto-focus on larger screens
-      if (window.innerWidth > 768) {
+    // No auto-focus on load so mobile users can adjust settings first.
+    document.querySelector(".container").addEventListener("click", () => {
+      if (!document.querySelector(".modal.active") && started) {
         textInput.focus();
       }
-    });
-    document.querySelector(".container").addEventListener("click", () => {
-      if (!document.querySelector(".modal.active")) textInput.focus();
     });
   </script>
 </body>
