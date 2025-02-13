@@ -184,8 +184,7 @@
       text-align: center;
       margin-top: 1rem;
     }
-    /* Start & Restart Buttons */
-    #startButton,
+    /* Restart Button */
     #restartButton {
       padding: 0.75rem 1.5rem;
       font-size: 1.2rem;
@@ -197,7 +196,6 @@
       transition: background 0.3s ease;
       margin-bottom: 1rem;
     }
-    #startButton:hover,
     #restartButton:hover {
       background: var(--accent-color);
       border-color: var(--accent-color);
@@ -295,6 +293,9 @@
     }
     /* Mobile Adjustments */
     @media screen and (max-width: 480px) {
+      #textDisplay {
+        height: 150px; /* Reduced height so keyboard doesn't hide the top */
+      }
       #textInput {
         font-size: 1.2rem;
         padding: 0.5rem;
@@ -308,7 +309,7 @@
       .header p {
         font-size: 0.9rem;
       }
-      #startButton, #restartButton {
+      #restartButton {
         font-size: 1rem;
         padding: 0.5rem 1rem;
       }
@@ -338,11 +339,11 @@
       </select>
     </div>
     <div id="textDisplay">
-      <!-- The test text will be generated here -->
+      <!-- Test text will be generated here -->
       <div id="cursor"></div>
     </div>
-    <!-- Initially disabled until the test starts -->
-    <input type="text" id="textInput" placeholder="Start typing..." autocomplete="off" disabled />
+    <!-- Auto-start: text input is enabled; test begins on first keystroke -->
+    <input type="text" id="textInput" placeholder="Start typing..." autocomplete="off" />
     
     <div class="stats">
       <div>WPM: <span id="wpm">0</span></div>
@@ -353,9 +354,7 @@
     </div>
     
     <div class="button-container">
-      <!-- Start Test button shown initially -->
-      <button id="startButton">Start Test</button>
-      <!-- Restart button (always available once test starts) -->
+      <!-- Restart Button -->
       <button id="restartButton">Restart</button>
     </div>
   </div>
@@ -442,7 +441,6 @@
     const accuracyElement = document.getElementById("accuracy");
     const progressBar = document.getElementById("progress");
     const restartButton = document.getElementById("restartButton");
-    const startButton = document.getElementById("startButton");
     const cursor = document.getElementById("cursor");
 
     // Modals & Top Bar
@@ -633,8 +631,15 @@
       });
     }
 
-    // ===== Input Event Handler =====
+    // ===== Input Event Handler (Auto-Start on First Keystroke) =====
     textInput.addEventListener("input", () => {
+      if (!started) {
+        totalTime = parseInt(durationSelect.value);
+        timeLeft = totalTime;
+        updateProgress();
+        started = true;
+        startTimer();
+      }
       const inputText = textInput.value;
       totalTyped++;
       const spans = textDisplay.querySelectorAll("span");
@@ -678,23 +683,6 @@
       }
     });
 
-    // ===== Start Test Button Handler =====
-    function startTest() {
-      totalTime = parseInt(durationSelect.value);
-      timeLeft = totalTime;
-      updateProgress();
-      started = true;
-      textInput.disabled = false;
-      textInput.focus();
-      startTimer();
-      startButton.style.display = "none";
-    }
-    startButton.addEventListener("click", startTest);
-    startButton.addEventListener("touchend", (e) => {
-      e.preventDefault();
-      startTest();
-    });
-
     // ===== Reset Test =====
     function resetTest() {
       clearInterval(timerInterval);
@@ -709,8 +697,10 @@
       accuracyElement.innerText = 0;
       updateProgress();
       generateText();
-      startButton.style.display = "block";
+      // Remove any focus so the keyboard hides on mobile
+      textInput.blur();
     }
+    // Add both click and touchend event listeners for mobile
     restartButton.addEventListener("click", resetTest);
     restartButton.addEventListener("touchend", (e) => {
       e.preventDefault();
@@ -786,13 +776,16 @@
 
     // ===== Auto-Scroll on Focus (for mobile) =====
     textInput.addEventListener("focus", () => {
+      // Ensure the input scrolls into view when focused
       textInput.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 
     // ===== Initialization =====
     updateProgress();
     generateText();
-    // No auto-focus on load so mobile users can adjust settings first.
+    // Auto-focus is allowed so the test can start on first keystroke
+    textInput.focus();
+    // When container is clicked (and test is running), re-focus the text input
     document.querySelector(".container").addEventListener("click", () => {
       if (!document.querySelector(".modal.active") && started) {
         textInput.focus();
