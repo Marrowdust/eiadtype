@@ -115,6 +115,11 @@
       font-size: 1rem;
       outline: none;
     }
+    /* Ensure the duration dropdown itself stops propagation */
+    .controls select,
+    .controls select * {
+      pointer-events: auto;
+    }
     #textDisplay {
       background: var(--card-bg);
       border: 1px solid var(--border-color);
@@ -492,7 +497,7 @@
     let correctChars = 0;
     let totalTyped = 0;
     let words = [];
-    let prevInputValue = ""; // For "block" mode
+    let prevInputValue = ""; // For block mode
 
     // Curated word sets
     const simpleWords = [
@@ -539,12 +544,7 @@
       restartShortcutInput.value = settings.restartShortcut;
       autoScrollToggle.checked = settings.autoScroll;
       stopOnErrorToggle.checked = settings.stopOnError;
-      if (settings.stopOnErrorMode) {
-        stopOnErrorModeSelect.value = settings.stopOnErrorMode;
-      } else {
-        settings.stopOnErrorMode = "end";
-        stopOnErrorModeSelect.value = "end";
-      }
+      stopOnErrorModeSelect.value = settings.stopOnErrorMode || "end";
       textComplexitySelect.value = settings.textComplexity;
       themeSelect.value = settings.theme;
     }
@@ -642,7 +642,7 @@
         wpm,
         accuracy
       });
-      textInput.blur(); // Allow keyboard to hide after results.
+      textInput.blur(); // Let the keyboard hide after results.
     }
     function saveHistory(result) {
       let history = JSON.parse(localStorage.getItem("typingTestHistory")) || [];
@@ -661,7 +661,7 @@
 
     // ===== Input Event Handler (Auto-Start on First Keystroke) =====
     textInput.addEventListener("input", () => {
-      // If test hasn't started, then initialize timer and save current value.
+      // If test hasn't started yet, initialize timer and store initial valid input.
       if (!started) {
         totalTime = parseInt(durationSelect.value);
         timeLeft = totalTime;
@@ -687,7 +687,6 @@
           spans[i].classList.remove("incorrect");
         }
       }
-      // Update correct character count.
       correctChars = 0;
       for (let i = 0; i < inputText.length; i++) {
         if (i < spans.length && inputText[i] === spans[i].innerText) {
@@ -695,25 +694,23 @@
         }
       }
       
-      // Handle stop on error if enabled.
+      // Handle stop-on-error if enabled.
       if (settings.stopOnError && inputText.length > 0) {
         const lastIndex = inputText.length - 1;
-        // If "End Test" mode: behave as before.
         if (settings.stopOnErrorMode === "end") {
+          // End the test if the last character is incorrect.
           if (lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
             clearInterval(timerInterval);
             textInput.disabled = true;
             showResults();
           }
-        } 
-        // If "Block Until Correct" mode: do not accept new character if error.
-        else if (settings.stopOnErrorMode === "block") {
+        } else if (settings.stopOnErrorMode === "block") {
+          // In block mode, if the last character is incorrect, revert to previous valid input.
           if (lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
-            // Revert to previous valid input.
             textInput.value = prevInputValue;
             return; // Stop further processing.
           } else {
-            // Update the previous valid value.
+            // Update previous valid value.
             prevInputValue = textInput.value;
           }
         }
@@ -723,13 +720,18 @@
     });
 
     // ===== Update Duration on Change (Before Test Starts) =====
-    durationSelect.addEventListener("change", () => {
-      // Only allow changes if the test hasn't started yet.
+    durationSelect.addEventListener("change", (e) => {
+      // Stop propagation so that tapping the dropdown doesn't force focus on the input.
+      e.stopPropagation();
       if (!started) {
         totalTime = parseInt(durationSelect.value);
         timeLeft = totalTime;
         updateProgress();
       }
+    });
+    // Also stop propagation for touch events on the duration select.
+    durationSelect.addEventListener("touchstart", (e) => {
+      e.stopPropagation();
     });
 
     // ===== Reset Test =====
@@ -746,7 +748,7 @@
       accuracyElement.innerText = 0;
       updateProgress();
       generateText();
-      // Re-focus the input so user can start typing immediately.
+      // Re-focus the input so the user can immediately start typing.
       textInput.focus();
     }
     // Ensure the restart button works with both click and touch.
@@ -830,8 +832,8 @@
     });
 
     // ===== Container Click Handling =====
-    // When clicking the container during a running test, re-focus the text input
-    // unless the click is on a SELECT element (so the duration dropdown works on mobile).
+    // When clicking on the container during a running test,
+    // if the target is not a SELECT element, re‑focus the text input.
     document.querySelector(".container").addEventListener("click", (e) => {
       if (!document.querySelector(".modal.active") && started && e.target.tagName !== "SELECT") {
         textInput.focus();
