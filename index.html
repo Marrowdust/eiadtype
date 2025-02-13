@@ -276,6 +276,17 @@
       width: auto;
       margin-right: 0.5rem;
     }
+    /* New: Stop On Error Mode Selector */
+    .settings-group select#stopOnErrorMode {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-color);
+      font-size: 1rem;
+      outline: none;
+      width: 100%;
+    }
     /* History Table */
     .history-table {
       width: 100%;
@@ -390,6 +401,14 @@
           Stop on Error
         </label>
       </div>
+      <!-- New Stop on Error Mode Selector -->
+      <div class="settings-group">
+        <label for="stopOnErrorMode">Stop On Error Mode:</label>
+        <select id="stopOnErrorMode">
+          <option value="end">End Test on Error</option>
+          <option value="block">Block Until Correct</option>
+        </select>
+      </div>
       <div class="settings-group">
         <label for="textComplexity">Text Complexity:</label>
         <select id="textComplexity">
@@ -463,6 +482,7 @@
     const historyTableBody = document.getElementById("historyBody");
     const clearHistoryButton = document.getElementById("clearHistoryButton");
     const closeHistoryButton = document.getElementById("closeHistoryButton");
+    const stopOnErrorModeSelect = document.getElementById("stopOnErrorMode");
 
     // ===== Global Variables =====
     let totalTime = parseInt(durationSelect.value);
@@ -472,6 +492,7 @@
     let correctChars = 0;
     let totalTyped = 0;
     let words = [];
+    let prevInputValue = ""; // For "block" mode
 
     // Curated word sets
     const simpleWords = [
@@ -507,6 +528,7 @@
       restartShortcut: "Shift+R",
       autoScroll: true,
       stopOnError: false,
+      stopOnErrorMode: "end", // "end" or "block"
       textComplexity: "simple",
       theme: "github-dark"
     };
@@ -517,6 +539,12 @@
       restartShortcutInput.value = settings.restartShortcut;
       autoScrollToggle.checked = settings.autoScroll;
       stopOnErrorToggle.checked = settings.stopOnError;
+      if (settings.stopOnErrorMode) {
+        stopOnErrorModeSelect.value = settings.stopOnErrorMode;
+      } else {
+        settings.stopOnErrorMode = "end";
+        stopOnErrorModeSelect.value = "end";
+      }
       textComplexitySelect.value = settings.textComplexity;
       themeSelect.value = settings.theme;
     }
@@ -614,8 +642,7 @@
         wpm,
         accuracy
       });
-      // Allow the keyboard to hide after results.
-      textInput.blur();
+      textInput.blur(); // Allow keyboard to hide after results.
     }
     function saveHistory(result) {
       let history = JSON.parse(localStorage.getItem("typingTestHistory")) || [];
@@ -634,12 +661,14 @@
 
     // ===== Input Event Handler (Auto-Start on First Keystroke) =====
     textInput.addEventListener("input", () => {
+      // If test hasn't started, then initialize timer and save current value.
       if (!started) {
         totalTime = parseInt(durationSelect.value);
         timeLeft = totalTime;
         updateProgress();
         started = true;
         startTimer();
+        prevInputValue = textInput.value;
       }
       const inputText = textInput.value;
       totalTyped++;
@@ -658,25 +687,44 @@
           spans[i].classList.remove("incorrect");
         }
       }
+      // Update correct character count.
       correctChars = 0;
       for (let i = 0; i < inputText.length; i++) {
         if (i < spans.length && inputText[i] === spans[i].innerText) {
           correctChars++;
         }
       }
-      if (settings.autoScroll) updateCursorPosition();
+      
+      // Handle stop on error if enabled.
       if (settings.stopOnError && inputText.length > 0) {
         const lastIndex = inputText.length - 1;
-        if (lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
-          clearInterval(timerInterval);
-          textInput.disabled = true;
-          showResults();
+        // If "End Test" mode: behave as before.
+        if (settings.stopOnErrorMode === "end") {
+          if (lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
+            clearInterval(timerInterval);
+            textInput.disabled = true;
+            showResults();
+          }
+        } 
+        // If "Block Until Correct" mode: do not accept new character if error.
+        else if (settings.stopOnErrorMode === "block") {
+          if (lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
+            // Revert to previous valid input.
+            textInput.value = prevInputValue;
+            return; // Stop further processing.
+          } else {
+            // Update the previous valid value.
+            prevInputValue = textInput.value;
+          }
         }
       }
+      
+      if (settings.autoScroll) updateCursorPosition();
     });
 
     // ===== Update Duration on Change (Before Test Starts) =====
     durationSelect.addEventListener("change", () => {
+      // Only allow changes if the test hasn't started yet.
       if (!started) {
         totalTime = parseInt(durationSelect.value);
         timeLeft = totalTime;
@@ -701,7 +749,7 @@
       // Re-focus the input so user can start typing immediately.
       textInput.focus();
     }
-    // Ensure the restart button works with both click and touch
+    // Ensure the restart button works with both click and touch.
     restartButton.addEventListener("click", resetTest);
     restartButton.addEventListener("touchend", (e) => {
       e.preventDefault();
@@ -749,6 +797,7 @@
       settings.restartShortcut = restartShortcutInput.value.trim() || "Shift+R";
       settings.autoScroll = autoScrollToggle.checked;
       settings.stopOnError = stopOnErrorToggle.checked;
+      settings.stopOnErrorMode = stopOnErrorModeSelect.value;
       settings.textComplexity = textComplexitySelect.value;
       settings.theme = themeSelect.value;
       localStorage.setItem("typingTestSettings", JSON.stringify(settings));
@@ -780,17 +829,20 @@
       textInput.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 
-    // ===== Initialization =====
-    updateProgress();
-    generateText();
-    // Auto-focus on load (if supported) so PC users can start typing immediately.
-    textInput.focus();
-    // When container is clicked during a running test, re-focus the text input.
-    document.querySelector(".container").addEventListener("click", () => {
-      if (!document.querySelector(".modal.active") && started) {
+    // ===== Container Click Handling =====
+    // When clicking the container during a running test, re-focus the text input
+    // unless the click is on a SELECT element (so the duration dropdown works on mobile).
+    document.querySelector(".container").addEventListener("click", (e) => {
+      if (!document.querySelector(".modal.active") && started && e.target.tagName !== "SELECT") {
         textInput.focus();
       }
     });
+
+    // ===== Initialization =====
+    updateProgress();
+    generateText();
+    // Auto-focus on load so that PC users can start typing immediately.
+    textInput.focus();
   </script>
 </body>
 </html>
