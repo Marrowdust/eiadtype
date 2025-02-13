@@ -115,7 +115,7 @@
       font-size: 1rem;
       outline: none;
     }
-    /* Allow the dropdown to receive pointer events without triggering container click */
+    /* Allow SELECT elements to receive pointer events without interference */
     .controls select,
     .controls select * {
       pointer-events: auto;
@@ -310,7 +310,7 @@
     /* Mobile Adjustments */
     @media screen and (max-width: 480px) {
       #textDisplay {
-        height: 150px; /* Reduced height so the keyboard doesn't cover the top */
+        height: 150px; /* Reduced height so keyboard doesn't cover the top */
       }
       #textInput {
         font-size: 1.2rem;
@@ -410,7 +410,7 @@
         <label for="stopOnErrorMode">Stop On Error Mode:</label>
         <select id="stopOnErrorMode">
           <option value="end">End Test on Error</option>
-          <option value="block">Block Until Correct</option>
+          <option value="block">Block on Space if Word Incomplete</option>
         </select>
       </div>
       <div class="settings-group">
@@ -497,187 +497,20 @@
     let totalTyped = 0;
     let words = [];
 
-    // We'll use beforeinput for block mode.
-    // (prevInputValue is no longer needed if we block insertion before it happens)
-
-    // Curated word sets
-    const simpleWords = [
-      "apple", "ball", "cat", "dog", "elephant", "fish", "guitar", "hat", "ice", "juice",
-      "kite", "lamp", "mouse", "nose", "orange", "pig", "queen", "rose", "sun", "tree",
-      "umbrella", "van", "wolf", "xylophone", "yarn", "zebra", "air", "book", "car", "desk",
-      "egg", "fork", "goat", "house", "island", "jar", "key", "leaf", "moon", "nest",
-      "owl", "pen", "quill", "river", "shoe", "table", "under", "vase", "water", "xray",
-      "yacht", "zip", "ant", "bridge", "candle", "door", "engine", "farm", "garden", "hill",
-      "jacket", "kitchen", "lunch", "mountain", "night", "ocean", "pencil", "quiet", "road", "star",
-      "train", "unicorn", "village", "window", "xenon", "yogurt", "zest", "arm", "brain", "chest",
-      "dinner", "ear", "face", "glove", "heart", "idea", "joke", "kick", "luck", "mind",
-      "noise", "order", "power", "quiet", "rest", "smile", "trust", "unity", "voice", "waste",
-      "yield", "zeal", "actor", "bottle", "candy", "dance", "earth", "feather", "globe", "hill",
-      "ink", "jungle", "koala", "lemonade", "monday", "novel", "oasis", "piano", "quartz", "river",
-      "sugar", "tiger", "uncle", "vapor", "whale", "xenial", "yonder", "zenith", "arch", "bridge",
-      "crown", "drum", "ember", "flame", "grape", "harbor", "ivy", "jewel", "king", "lily",
-      "moss", "nest", "olive", "pearl", "quartz", "rain", "sugar", "tide", "urban", "vivid",
-      "whisper", "xenon", "yolk", "zephyr", "actor", "baker", "chef", "doctor", "engineer", "farmer",
-      "guard", "hunter", "inventor", "judge", "king", "leader", "minister", "nurse", "officer", "pilot",
-      "queen", "ranger", "sailor", "teacher", "umpire", "veteran", "worker", "xenophile", "yodeler", "zealot"
-    ];
-    const advancedWords = [
-      "exacerbate", "gregarious", "ubiquitous", "mellifluous", "ephemeral",
-      "obfuscate", "quintessential", "idiosyncratic", "perspicacious",
-      "incontrovertible", "magnanimous", "perfunctory", "recalcitrant",
-      "acrimonious", "capricious", "loquacious", "ineffable", "soliloquy",
-      "panacea", "anomaly", "benevolent"
-    ];
-
-    // Settings object with defaults
-    let settings = {
-      restartShortcut: "Shift+R",
-      autoScroll: true,
-      stopOnError: false,
-      stopOnErrorMode: "end", // "end" or "block"
-      textComplexity: "simple",
-      theme: "github-dark"
-    };
-
-    // Load settings from localStorage if available
-    if (localStorage.getItem("typingTestSettings")) {
-      settings = JSON.parse(localStorage.getItem("typingTestSettings"));
-      restartShortcutInput.value = settings.restartShortcut;
-      autoScrollToggle.checked = settings.autoScroll;
-      stopOnErrorToggle.checked = settings.stopOnError;
-      stopOnErrorModeSelect.value = settings.stopOnErrorMode || "end";
-      textComplexitySelect.value = settings.textComplexity;
-      themeSelect.value = settings.theme;
-    }
-
-    // ===== Apply Theme =====
-    function applyTheme() {
-      document.documentElement.classList.remove("theme-blue", "theme-classic");
-      if (settings.theme === "blue") {
-        document.documentElement.classList.add("theme-blue");
-      } else if (settings.theme === "classic") {
-        document.documentElement.classList.add("theme-classic");
-      }
-    }
-    applyTheme();
-
-    // ===== Generate Test Text =====
-    function generateText() {
-      words = [];
-      textDisplay.innerHTML = "";
-      textDisplay.appendChild(cursor);
-      if (settings.textComplexity === "simple") {
-        let wordArray = [...simpleWords];
-        for (let i = wordArray.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [wordArray[i], wordArray[j]] = [wordArray[j], wordArray[i]];
-        }
-        wordArray = wordArray.slice(0, 50);
-        wordArray.forEach(word => {
-          words.push(word);
-        });
-      } else {
-        const wordArray = advancedWords;
-        for (let i = 0; i < 50; i++) {
-          const randomIndex = Math.floor(Math.random() * wordArray.length);
-          words.push(wordArray[randomIndex]);
-        }
-      }
-      words.forEach((word, index) => {
-        for (let char of word) {
-          const span = document.createElement("span");
-          span.innerText = char;
-          textDisplay.insertBefore(span, cursor);
-        }
-        if (index < words.length - 1) {
-          const span = document.createElement("span");
-          span.innerText = " ";
-          textDisplay.insertBefore(span, cursor);
-        }
-      });
-      updateCursorPosition();
-    }
-
-    // ===== Cursor Positioning =====
-    function updateCursorPosition() {
-      const spans = textDisplay.querySelectorAll("span");
-      const index = textInput.value.length;
-      if (index < spans.length) {
-        const targetSpan = spans[index];
-        cursor.style.left = targetSpan.offsetLeft + "px";
-        cursor.style.top = targetSpan.offsetTop + "px";
-        cursor.style.display = "block";
-      } else {
-        cursor.style.display = "none";
-      }
-    }
-
-    // ===== Timer and Progress =====
-    function startTimer() {
-      timerInterval = setInterval(() => {
-        timeLeft--;
-        updateProgress();
-        if (timeLeft <= 0) {
-          clearInterval(timerInterval);
-          textInput.disabled = true;
-          showResults();
-        }
-      }, 1000);
-    }
-    function updateProgress() {
-      progressBar.style.width = ((timeLeft / totalTime) * 100) + "%";
-    }
-
-    // ===== Show Results & Save History =====
-    function showResults() {
-      const wpm = Math.round((correctChars / 5) / (totalTime / 60));
-      const accuracy = totalTyped > 0 ? Math.round((correctChars / totalTyped) * 100) : 0;
-      finalWPMElement.innerText = wpm;
-      finalAccuracyElement.innerText = accuracy;
-      resultModal.classList.add("active");
-      wpmElement.innerText = wpm;
-      accuracyElement.innerText = accuracy;
-      saveHistory({
-        date: new Date().toLocaleString(),
-        duration: totalTime,
-        wpm,
-        accuracy
-      });
-      textInput.blur(); // Allow keyboard to hide after results.
-    }
-    function saveHistory(result) {
-      let history = JSON.parse(localStorage.getItem("typingTestHistory")) || [];
-      history.push(result);
-      localStorage.setItem("typingTestHistory", JSON.stringify(history));
-    }
-    function loadHistory() {
-      let history = JSON.parse(localStorage.getItem("typingTestHistory")) || [];
-      historyTableBody.innerHTML = "";
-      history.reverse().forEach(item => {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${item.date}</td><td>${item.duration}</td><td>${item.wpm}</td><td>${item.accuracy}</td>`;
-        historyTableBody.appendChild(row);
-      });
-    }
-
-    // ===== BEFOREINPUT Event for "Block Until Correct" Mode =====
+    // We'll use beforeinput to block space insertion if the current word is not complete.
+    // In Block mode, only when a space is attempted, we check:
+    //   - Determine the current word (text after the last space in textInput.value).
+    //   - Determine its index (number of spaces in the input).
+    //   - If current word !== target word exactly, prevent insertion of space.
     textInput.addEventListener("beforeinput", (e) => {
       if (settings.stopOnError && settings.stopOnErrorMode === "block") {
-        // Only process insertions.
-        if (e.inputType === "insertText" || e.inputType === "insertCompositionText") {
-          // Determine the prospective new value.
-          // Assume the cursor is at the end (typical for a typing test).
-          let prospective = textInput.value + e.data;
-          let wordsInInput = prospective.split(" ");
-          let currentWordIndex = wordsInInput.length - 1;
-          let currentWordInput = wordsInInput[currentWordIndex];
-          // Only check if we have a corresponding target word.
-          if (currentWordIndex < words.length) {
-            let targetWord = words[currentWordIndex];
-            if (!targetWord.startsWith(currentWordInput)) {
-              // Block the insertion.
-              e.preventDefault();
-            }
+        if (e.inputType === "insertText" && e.data === " ") {
+          let currentValue = textInput.value;
+          let currentWord = currentValue.split(" ").pop(); // text after last space
+          let wordIndex = currentValue.split(" ").length - 1; // number of spaces equals index of current word
+          if (wordIndex < words.length && currentWord !== words[wordIndex]) {
+            // Prevent space if the word isn't complete.
+            e.preventDefault();
           }
         }
       }
@@ -685,7 +518,7 @@
 
     // ===== Input Event Handler (Auto-Start on First Keystroke) =====
     textInput.addEventListener("input", () => {
-      // If test hasn't started yet, initialize timer.
+      // Start timer on first keystroke.
       if (!started) {
         totalTime = parseInt(durationSelect.value);
         timeLeft = totalTime;
@@ -716,8 +549,7 @@
           correctChars++;
         }
       }
-      
-      // In "End Test" mode, if the last character is wrong, end the test.
+      // In "End" mode, if the last character is incorrect, end the test.
       if (settings.stopOnError && settings.stopOnErrorMode === "end") {
         const lastIndex = inputText.length - 1;
         if (lastIndex >= 0 && lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
@@ -727,7 +559,6 @@
           return;
         }
       }
-      
       if (settings.autoScroll) updateCursorPosition();
     });
 
@@ -743,6 +574,55 @@
     durationSelect.addEventListener("touchstart", (e) => {
       e.stopPropagation();
     });
+
+    // ===== Timer and Progress Functions =====
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateProgress();
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          textInput.disabled = true;
+          showResults();
+        }
+      }, 1000);
+    }
+    function updateProgress() {
+      progressBar.style.width = ((timeLeft / totalTime) * 100) + "%";
+    }
+
+    // ===== Show Results & Save History =====
+    function showResults() {
+      // WPM calculated as: (Correct Characters / 5) divided by (Time in Minutes)
+      const wpm = Math.round((correctChars / 5) / (totalTime / 60));
+      const accuracy = totalTyped > 0 ? Math.round((correctChars / totalTyped) * 100) : 0;
+      finalWPMElement.innerText = wpm;
+      finalAccuracyElement.innerText = accuracy;
+      resultModal.classList.add("active");
+      wpmElement.innerText = wpm;
+      accuracyElement.innerText = accuracy;
+      saveHistory({
+        date: new Date().toLocaleString(),
+        duration: totalTime,
+        wpm,
+        accuracy
+      });
+      textInput.blur();
+    }
+    function saveHistory(result) {
+      let history = JSON.parse(localStorage.getItem("typingTestHistory")) || [];
+      history.push(result);
+      localStorage.setItem("typingTestHistory", JSON.stringify(history));
+    }
+    function loadHistory() {
+      let history = JSON.parse(localStorage.getItem("typingTestHistory")) || [];
+      historyTableBody.innerHTML = "";
+      history.reverse().forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${item.date}</td><td>${item.duration}</td><td>${item.wpm}</td><td>${item.accuracy}</td>`;
+        historyTableBody.appendChild(row);
+      });
+    }
 
     // ===== Reset Test =====
     function resetTest() {
