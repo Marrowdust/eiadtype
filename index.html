@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Advanced Dark Typing Test</title>
+  <title>DodoType</title>
   <!-- Google Fonts for modern look -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <style>
@@ -115,7 +115,7 @@
       font-size: 1rem;
       outline: none;
     }
-    /* Ensure the duration dropdown itself stops propagation */
+    /* Allow SELECT elements to receive pointer events */
     .controls select,
     .controls select * {
       pointer-events: auto;
@@ -281,7 +281,7 @@
       width: auto;
       margin-right: 0.5rem;
     }
-    /* New: Stop On Error Mode Selector */
+    /* Stop On Error Mode Selector */
     .settings-group select#stopOnErrorMode {
       padding: 0.5rem 1rem;
       border: none;
@@ -406,7 +406,6 @@
           Stop on Error
         </label>
       </div>
-      <!-- New Stop on Error Mode Selector -->
       <div class="settings-group">
         <label for="stopOnErrorMode">Stop On Error Mode:</label>
         <select id="stopOnErrorMode">
@@ -497,7 +496,7 @@
     let correctChars = 0;
     let totalTyped = 0;
     let words = [];
-    let prevInputValue = ""; // For block mode
+    let prevInputValue = ""; // Used for "block" mode
 
     // Curated word sets
     const simpleWords = [
@@ -642,7 +641,7 @@
         wpm,
         accuracy
       });
-      textInput.blur(); // Let the keyboard hide after results.
+      textInput.blur(); // Allow keyboard to hide after results.
     }
     function saveHistory(result) {
       let history = JSON.parse(localStorage.getItem("typingTestHistory")) || [];
@@ -661,7 +660,7 @@
 
     // ===== Input Event Handler (Auto-Start on First Keystroke) =====
     textInput.addEventListener("input", () => {
-      // If test hasn't started yet, initialize timer and store initial valid input.
+      // If test hasn't started, initialize timer and store initial valid input.
       if (!started) {
         totalTime = parseInt(durationSelect.value);
         timeLeft = totalTime;
@@ -671,6 +670,27 @@
         prevInputValue = textInput.value;
       }
       const inputText = textInput.value;
+      
+      // If Stop On Error is enabled and block mode is chosen, prevent insertion if current word is wrong.
+      if (settings.stopOnError && settings.stopOnErrorMode === "block") {
+        // Only check when insertion occurs.
+        if (inputText.length > prevInputValue.length) {
+          const inputWords = inputText.split(" ");
+          const currentWordIndex = inputWords.length - 1;
+          const currentWordInput = inputWords[currentWordIndex];
+          if (currentWordIndex < words.length) {
+            const targetWord = words[currentWordIndex];
+            // If the current input is not a correct prefix of the target word, revert.
+            if (!targetWord.startsWith(currentWordInput)) {
+              textInput.value = prevInputValue;
+              return;
+            }
+          }
+        }
+        // Update previous valid value (allow deletion).
+        prevInputValue = textInput.value;
+      }
+      
       totalTyped++;
       const spans = textDisplay.querySelectorAll("span");
       for (let i = 0; i < spans.length; i++) {
@@ -694,25 +714,14 @@
         }
       }
       
-      // Handle stop-on-error if enabled.
-      if (settings.stopOnError && inputText.length > 0) {
+      // In "end" mode, if stop on error is enabled, end the test when an error is detected.
+      if (settings.stopOnError && settings.stopOnErrorMode === "end") {
         const lastIndex = inputText.length - 1;
-        if (settings.stopOnErrorMode === "end") {
-          // End the test if the last character is incorrect.
-          if (lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
-            clearInterval(timerInterval);
-            textInput.disabled = true;
-            showResults();
-          }
-        } else if (settings.stopOnErrorMode === "block") {
-          // In block mode, if the last character is incorrect, revert to previous valid input.
-          if (lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
-            textInput.value = prevInputValue;
-            return; // Stop further processing.
-          } else {
-            // Update previous valid value.
-            prevInputValue = textInput.value;
-          }
+        if (lastIndex >= 0 && lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
+          clearInterval(timerInterval);
+          textInput.disabled = true;
+          showResults();
+          return;
         }
       }
       
@@ -721,7 +730,7 @@
 
     // ===== Update Duration on Change (Before Test Starts) =====
     durationSelect.addEventListener("change", (e) => {
-      // Stop propagation so that tapping the dropdown doesn't force focus on the input.
+      // Prevent container click from refocusing the input.
       e.stopPropagation();
       if (!started) {
         totalTime = parseInt(durationSelect.value);
@@ -729,7 +738,6 @@
         updateProgress();
       }
     });
-    // Also stop propagation for touch events on the duration select.
     durationSelect.addEventListener("touchstart", (e) => {
       e.stopPropagation();
     });
@@ -748,7 +756,9 @@
       accuracyElement.innerText = 0;
       updateProgress();
       generateText();
-      // Re-focus the input so the user can immediately start typing.
+      // Reset previous valid value.
+      prevInputValue = "";
+      // Re-focus the input so the user can start typing immediately.
       textInput.focus();
     }
     // Ensure the restart button works with both click and touch.
