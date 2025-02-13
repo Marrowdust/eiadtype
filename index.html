@@ -342,7 +342,7 @@
       <!-- Test text will be generated here -->
       <div id="cursor"></div>
     </div>
-    <!-- Auto-start: text input is enabled; test begins on first keystroke -->
+    <!-- The text input is enabled from the start. The test auto-starts on first keystroke. -->
     <input type="text" id="textInput" placeholder="Start typing..." autocomplete="off" />
     
     <div class="stats">
@@ -614,6 +614,7 @@
         wpm,
         accuracy
       });
+      // Allow the keyboard to hide after results.
       textInput.blur();
     }
     function saveHistory(result) {
@@ -686,7 +687,7 @@
     // ===== Reset Test =====
     function resetTest() {
       clearInterval(timerInterval);
-      textInput.disabled = true;
+      textInput.disabled = false;
       textInput.value = "";
       started = false;
       totalTime = parseInt(durationSelect.value);
@@ -697,10 +698,10 @@
       accuracyElement.innerText = 0;
       updateProgress();
       generateText();
-      // Remove any focus so the keyboard hides on mobile
-      textInput.blur();
+      // Re-focus the input so user can start typing immediately.
+      textInput.focus();
     }
-    // Add both click and touchend event listeners for mobile
+    // Ensure the restart button works with both click and touch
     restartButton.addEventListener("click", resetTest);
     restartButton.addEventListener("touchend", (e) => {
       e.preventDefault();
@@ -776,16 +777,15 @@
 
     // ===== Auto-Scroll on Focus (for mobile) =====
     textInput.addEventListener("focus", () => {
-      // Ensure the input scrolls into view when focused
       textInput.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 
     // ===== Initialization =====
     updateProgress();
     generateText();
-    // Auto-focus is allowed so the test can start on first keystroke
+    // Auto-focus on load (if supported) so PC users can start typing immediately.
     textInput.focus();
-    // When container is clicked (and test is running), re-focus the text input
+    // When container is clicked during a running test, re-focus the text input.
     document.querySelector(".container").addEventListener("click", () => {
       if (!document.querySelector(".modal.active") && started) {
         textInput.focus();
