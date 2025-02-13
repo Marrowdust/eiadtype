@@ -444,6 +444,7 @@
     let words = [];
 
     // Curated word sets
+    // 200+ common everyday words for "simple" mode (no repeats per test)
     const simpleWords = [
       "apple", "ball", "cat", "dog", "elephant", "fish", "guitar", "hat", "ice", "juice",
       "kite", "lamp", "mouse", "nose", "orange", "pig", "queen", "rose", "sun", "tree",
@@ -464,6 +465,7 @@
       "guard", "hunter", "inventor", "judge", "king", "leader", "minister", "nurse", "officer", "pilot",
       "queen", "ranger", "sailor", "teacher", "umpire", "veteran", "worker", "xenophile", "yodeler", "zealot"
     ];
+    // Advanced words (repetitions allowed)
     const advancedWords = [
       "exacerbate", "gregarious", "ubiquitous", "mellifluous", "ephemeral",
       "obfuscate", "quintessential", "idiosyncratic", "perspicacious",
@@ -499,6 +501,7 @@
       } else if (settings.theme === "classic") {
         document.documentElement.classList.add("theme-classic");
       }
+      // If "github-dark", no extra class is needed (default variables)
     }
     applyTheme();
 
@@ -506,24 +509,30 @@
     function generateText() {
       words = [];
       textDisplay.innerHTML = "";
+      // Ensure the cursor element remains as the last child
       textDisplay.appendChild(cursor);
       if (settings.textComplexity === "simple") {
+        // Use a copy of simpleWords and shuffle so no word repeats
         let wordArray = [...simpleWords];
+        // Shuffle wordArray using Fisher–Yates
         for (let i = wordArray.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [wordArray[i], wordArray[j]] = [wordArray[j], wordArray[i]];
         }
+        // Take the first 50 words
         wordArray = wordArray.slice(0, 50);
         wordArray.forEach(word => {
           words.push(word);
         });
       } else {
+        // For advanced mode, allow repetition
         const wordArray = advancedWords;
         for (let i = 0; i < 50; i++) {
           const randomIndex = Math.floor(Math.random() * wordArray.length);
           words.push(wordArray[randomIndex]);
         }
       }
+      // Render each word as individual spans with a space between words
       words.forEach((word, index) => {
         for (let char of word) {
           const span = document.createElement("span");
@@ -536,6 +545,7 @@
           textDisplay.insertBefore(span, cursor);
         }
       });
+      // Update cursor position after generating text
       updateCursorPosition();
     }
 
@@ -545,8 +555,10 @@
       const index = textInput.value.length;
       if (index < spans.length) {
         const targetSpan = spans[index];
-        cursor.style.left = targetSpan.offsetLeft + "px";
-        cursor.style.top = targetSpan.offsetTop + "px";
+        const left = targetSpan.offsetLeft;
+        const top = targetSpan.offsetTop;
+        cursor.style.left = left + "px";
+        cursor.style.top = top + "px";
         cursor.style.display = "block";
       } else {
         cursor.style.display = "none";
@@ -644,15 +656,6 @@
       }
     });
 
-    // ===== Update Duration on Change (Before Test Starts) =====
-    durationSelect.addEventListener("change", () => {
-      if (!started) {
-        totalTime = parseInt(durationSelect.value);
-        timeLeft = totalTime;
-        updateProgress();
-      }
-    });
-
     // ===== Reset Test =====
     function resetTest() {
       clearInterval(timerInterval);
@@ -681,6 +684,7 @@
       return keys.join("+");
     }
     document.addEventListener("keydown", (e) => {
+      // Allow Escape as restart if no modal is open
       if (e.key === "Escape" && !document.querySelector(".modal.active")) {
         e.preventDefault();
         resetTest();
@@ -741,10 +745,7 @@
     updateProgress();
     generateText();
     window.addEventListener("load", () => {
-      // Only auto-focus on larger screens
-      if (window.innerWidth > 768) {
-        textInput.focus();
-      }
+      textInput.focus();
     });
     document.querySelector(".container").addEventListener("click", () => {
       if (!document.querySelector(".modal.active")) textInput.focus();
