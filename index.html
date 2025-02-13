@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DodoType</title>
+  <title>Advanced Dark Typing Test</title>
   <!-- Google Fonts for modern look -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <style>
@@ -115,7 +115,7 @@
       font-size: 1rem;
       outline: none;
     }
-    /* Allow SELECT elements to receive pointer events */
+    /* Allow the dropdown to receive pointer events without triggering container click */
     .controls select,
     .controls select * {
       pointer-events: auto;
@@ -310,7 +310,7 @@
     /* Mobile Adjustments */
     @media screen and (max-width: 480px) {
       #textDisplay {
-        height: 150px; /* Reduced height so keyboard doesn't hide the top */
+        height: 150px; /* Reduced height so the keyboard doesn't cover the top */
       }
       #textInput {
         font-size: 1.2rem;
@@ -496,7 +496,9 @@
     let correctChars = 0;
     let totalTyped = 0;
     let words = [];
-    let prevInputValue = ""; // Used for "block" mode
+
+    // We'll use beforeinput for block mode.
+    // (prevInputValue is no longer needed if we block insertion before it happens)
 
     // Curated word sets
     const simpleWords = [
@@ -658,39 +660,40 @@
       });
     }
 
+    // ===== BEFOREINPUT Event for "Block Until Correct" Mode =====
+    textInput.addEventListener("beforeinput", (e) => {
+      if (settings.stopOnError && settings.stopOnErrorMode === "block") {
+        // Only process insertions.
+        if (e.inputType === "insertText" || e.inputType === "insertCompositionText") {
+          // Determine the prospective new value.
+          // Assume the cursor is at the end (typical for a typing test).
+          let prospective = textInput.value + e.data;
+          let wordsInInput = prospective.split(" ");
+          let currentWordIndex = wordsInInput.length - 1;
+          let currentWordInput = wordsInInput[currentWordIndex];
+          // Only check if we have a corresponding target word.
+          if (currentWordIndex < words.length) {
+            let targetWord = words[currentWordIndex];
+            if (!targetWord.startsWith(currentWordInput)) {
+              // Block the insertion.
+              e.preventDefault();
+            }
+          }
+        }
+      }
+    });
+
     // ===== Input Event Handler (Auto-Start on First Keystroke) =====
     textInput.addEventListener("input", () => {
-      // If test hasn't started, initialize timer and store initial valid input.
+      // If test hasn't started yet, initialize timer.
       if (!started) {
         totalTime = parseInt(durationSelect.value);
         timeLeft = totalTime;
         updateProgress();
         started = true;
         startTimer();
-        prevInputValue = textInput.value;
       }
       const inputText = textInput.value;
-      
-      // If Stop On Error is enabled and block mode is chosen, prevent insertion if current word is wrong.
-      if (settings.stopOnError && settings.stopOnErrorMode === "block") {
-        // Only check when insertion occurs.
-        if (inputText.length > prevInputValue.length) {
-          const inputWords = inputText.split(" ");
-          const currentWordIndex = inputWords.length - 1;
-          const currentWordInput = inputWords[currentWordIndex];
-          if (currentWordIndex < words.length) {
-            const targetWord = words[currentWordIndex];
-            // If the current input is not a correct prefix of the target word, revert.
-            if (!targetWord.startsWith(currentWordInput)) {
-              textInput.value = prevInputValue;
-              return;
-            }
-          }
-        }
-        // Update previous valid value (allow deletion).
-        prevInputValue = textInput.value;
-      }
-      
       totalTyped++;
       const spans = textDisplay.querySelectorAll("span");
       for (let i = 0; i < spans.length; i++) {
@@ -714,7 +717,7 @@
         }
       }
       
-      // In "end" mode, if stop on error is enabled, end the test when an error is detected.
+      // In "End Test" mode, if the last character is wrong, end the test.
       if (settings.stopOnError && settings.stopOnErrorMode === "end") {
         const lastIndex = inputText.length - 1;
         if (lastIndex >= 0 && lastIndex < spans.length && !spans[lastIndex].classList.contains("correct")) {
@@ -730,7 +733,6 @@
 
     // ===== Update Duration on Change (Before Test Starts) =====
     durationSelect.addEventListener("change", (e) => {
-      // Prevent container click from refocusing the input.
       e.stopPropagation();
       if (!started) {
         totalTime = parseInt(durationSelect.value);
@@ -756,12 +758,8 @@
       accuracyElement.innerText = 0;
       updateProgress();
       generateText();
-      // Reset previous valid value.
-      prevInputValue = "";
-      // Re-focus the input so the user can start typing immediately.
       textInput.focus();
     }
-    // Ensure the restart button works with both click and touch.
     restartButton.addEventListener("click", resetTest);
     restartButton.addEventListener("touchend", (e) => {
       e.preventDefault();
@@ -853,7 +851,7 @@
     // ===== Initialization =====
     updateProgress();
     generateText();
-    // Auto-focus on load so that PC users can start typing immediately.
+    // Auto‑focus on load for PC users.
     textInput.focus();
   </script>
 </body>
